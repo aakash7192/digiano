@@ -1561,6 +1561,55 @@
     return 60000 / avgMs;
   }
 
+  function playClick(ac, time) {
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 1000;
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(0.35, time + 0.001);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(time);
+    osc.stop(time + 0.05);
+    setTimeout(flashLed, Math.max(0, (time - ac.currentTime) * 1000));
+  }
+
+  function flashLed() {
+    metroLedEl.classList.add("lit");
+    setTimeout(() => metroLedEl.classList.remove("lit"), 80);
+  }
+
+  function metroScheduler() {
+    const ac = audio();
+    const { ticks, next } = ticksInWindow(metroNextTick, ac.currentTime + METRO_LOOKAHEAD, bpm);
+    ticks.forEach(t => playClick(ac, t));
+    metroNextTick = next;
+  }
+
+  function startMetronome() {
+    if (metronomeOn) return;
+    metronomeOn = true;
+    metroNextTick = audio().currentTime + 0.05;
+    metroScheduler();
+    metroTimer = setInterval(metroScheduler, METRO_INTERVAL);
+    metroToggleEl.classList.add("playing");
+    metroToggleEl.setAttribute("aria-pressed", "true");
+  }
+
+  function stopMetronome() {
+    if (!metronomeOn) return;
+    metronomeOn = false;
+    clearInterval(metroTimer);
+    metroTimer = null;
+    metroToggleEl.classList.remove("playing");
+    metroToggleEl.setAttribute("aria-pressed", "false");
+  }
+
+  metroToggleEl.addEventListener("click", () => {
+    if (metronomeOn) stopMetronome(); else startMetronome();
+  });
+
   /* ---------- Computer keyboard ---------- */
   window.addEventListener("keydown", e => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;

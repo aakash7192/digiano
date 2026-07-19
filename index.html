@@ -264,11 +264,28 @@
 
   @keyframes nudgeL { from { transform: translateX(-14px); } to { transform: none; } }
   @keyframes nudgeR { from { transform: translateX(14px); }  to { transform: none; } }
-  .keyboard.nudge-l { animation: nudgeL .22s ease; }
-  .keyboard.nudge-r { animation: nudgeR .22s ease; }
+  .keys.nudge-l { animation: nudgeL .22s ease; }
+  .keys.nudge-r { animation: nudgeR .22s ease; }
   @media (prefers-reduced-motion: reduce) {
-    .keyboard.nudge-l, .keyboard.nudge-r { animation: none; }
+    .keys.nudge-l, .keys.nudge-r { animation: none; }
   }
+
+  /* Collapsible sections — headers only appear on small screens */
+  .sec-head { display: none; }
+  .studio-head .sec-toggle { display: none; }
+  .sec-toggle {
+    width: 44px; height: 44px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--btn-hi), var(--btn-lo));
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .sec-toggle .chev { transition: transform .25s ease; }
+  section.collapsed .sec-toggle .chev { transform: rotate(-90deg); }
 
   select {
     font-family: var(--body);
@@ -660,6 +677,25 @@
     .key .cap { display: none; }
     .key .note { font-size: 19px; }
 
+    .sec-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .studio-head { flex-wrap: wrap; }
+    .studio-head .sec-toggle { display: grid; }
+    .sec-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .3s ease; }
+    .sec-body > .sec-inner { overflow: hidden; min-height: 0; }
+    section.collapsed .sec-body { grid-template-rows: 0fr; }
+    .keyboard .sec-head { margin-bottom: 0; }
+    .keyboard:not(.collapsed) .sec-head { margin-bottom: 10px; }
+    .studio.collapsed .studio-head { padding-bottom: 14px; }
+    @media (prefers-reduced-motion: reduce) {
+      .sec-body { transition: none; }
+    }
+
     .rec-btn { width: 62px; height: 62px; }
     .deck-btn { padding: 13px 16px; }
     .tbtn { width: 36px; height: 36px; font-size: 12px; }
@@ -705,6 +741,11 @@
   </header>
 
   <section class="panel" aria-label="Scale controls">
+    <div class="sec-head">
+      <span class="control-label">Scale &amp; sound</span>
+      <button class="sec-toggle" aria-expanded="true" aria-label="Collapse Scale and sound"><span class="chev">▾</span></button>
+    </div>
+    <div class="sec-body"><div class="sec-inner">
     <div class="panel-row">
       <div class="control">
         <span class="control-label" id="root-label">Root</span>
@@ -732,9 +773,18 @@
     </div>
     <div class="readout" id="readout" aria-live="polite"></div>
     <div class="chords" id="chords" aria-label="Chord pads"></div>
+    </div></div>
   </section>
 
-  <section class="keyboard" aria-label="Piano keys" id="keyboard"></section>
+  <section class="keyboard" aria-label="Piano keys">
+    <div class="sec-head">
+      <span class="control-label">Keyboard</span>
+      <button class="sec-toggle" aria-expanded="true" aria-label="Collapse Keyboard"><span class="chev">▾</span></button>
+    </div>
+    <div class="sec-body"><div class="sec-inner">
+      <div class="keys" id="keyboard"></div>
+    </div></div>
+  </section>
 
   <section class="studio" aria-label="Studio">
     <div class="studio-head">
@@ -744,8 +794,10 @@
         <button id="tab-perform" role="tab" aria-selected="true">Perform</button>
         <button id="tab-mix" role="tab" aria-selected="false">Mix <span class="count" id="track-count"></span></button>
       </div>
+      <button class="sec-toggle" aria-expanded="true" aria-label="Collapse Studio"><span class="chev">▾</span></button>
     </div>
 
+    <div class="sec-body"><div class="sec-inner">
     <div class="views" id="views">
       <div class="view perform" role="tabpanel" aria-label="Perform">
         <div class="deck">
@@ -775,6 +827,7 @@
         </div>
       </div>
     </div>
+    </div></div>
   </section>
 
   <p class="hint">
@@ -1389,6 +1442,16 @@
   }
   tabPerform.addEventListener("click", () => setView("perform"));
   tabMix.addEventListener("click", () => setView("mix"));
+
+  /* ---------- Collapsible sections (small screens) ---------- */
+  document.querySelectorAll(".sec-toggle").forEach(btn => {
+    const secName = btn.getAttribute("aria-label").replace(/^Collapse /, "");
+    btn.addEventListener("click", () => {
+      const collapsed = btn.closest("section").classList.toggle("collapsed");
+      btn.setAttribute("aria-expanded", String(!collapsed));
+      btn.setAttribute("aria-label", (collapsed ? "Expand " : "Collapse ") + secName);
+    });
+  });
 
   /* ---------- Finishes (themes) ---------- */
   const swatches = document.querySelectorAll(".swatch");

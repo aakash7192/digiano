@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Digiano — digital piano studio</title>
-<meta name="description" content="Digiano: a scale-aware piano studio in a single HTML file. Play, record takes, mix tracks, and download your piece as WAV.">
+<title>Tonik — the keyboard that's always in key</title>
+<meta name="description" content="Tonik: a scale-aware piano studio in a single HTML file. Every key is in the scale, so nothing sounds wrong. Play, record takes, mix tracks, and download your piece as WAV.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
 <style>
   :root {
@@ -689,8 +689,8 @@
         <rect class="k-black" x="19" y="4" width="7" height="15" rx="1.5"/>
       </svg>
       <div>
-        <h1>Digi<b>ano</b></h1>
-        <span class="tag">digital piano · studio</span>
+        <h1>Ton<b>ik</b></h1>
+        <span class="tag">always in key · studio</span>
       </div>
     </div>
     <div class="finishes">
@@ -1363,7 +1363,7 @@
       const url = URL.createObjectURL(encodeWav(rendered));
       const a = document.createElement("a");
       a.href = url;
-      a.download = "digiano-mix.wav";
+      a.download = "tonik-mix.wav";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
       dlBtn.textContent = "Saved ✓";
@@ -1396,11 +1396,11 @@
     if (name === "walnut") delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = name;
     swatches.forEach(s => s.setAttribute("aria-pressed", s.dataset.finish === name));
-    try { localStorage.setItem("digiano-finish", name); } catch (e) {}
+    try { localStorage.setItem("tonik-finish", name); } catch (e) {}
   }
   swatches.forEach(s => s.addEventListener("click", () => setFinish(s.dataset.finish)));
   let savedFinish = "walnut";
-  try { savedFinish = localStorage.getItem("digiano-finish") || "walnut"; } catch (e) {}
+  try { savedFinish = localStorage.getItem("tonik-finish") || "walnut"; } catch (e) {}
   setFinish(savedFinish);
 
   /* ---------- Computer keyboard ---------- */

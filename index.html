@@ -262,6 +262,58 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* ---------- Metronome ---------- */
+  .metro-ctl { display: flex; align-items: center; gap: 6px; }
+  .metro-bpm {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    width: 52px;
+    text-align: center;
+    padding: 7px 4px;
+    border-radius: 4px;
+    background: var(--well);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .metro-bpm::-webkit-inner-spin-button,
+  .metro-bpm::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .metro-bpm { -moz-appearance: textfield; }
+  .metro-unit {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .metro-tap {
+    font-size: 13px;
+    padding: 9px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--btn-hi), var(--btn-lo));
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s;
+  }
+  .metro-tap:hover { color: var(--text); }
+  .metro-tap.tapped {
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+    border-color: var(--accent-deep);
+  }
+  .metro-led {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .35;
+    margin-right: 7px;
+    vertical-align: middle;
+    transition: opacity .06s ease-out, transform .06s ease-out;
+  }
+  .metro-led.lit { opacity: 1; transform: scale(1.4); }
+
   @keyframes nudgeL { from { transform: translateX(-14px); } to { transform: none; } }
   @keyframes nudgeR { from { transform: translateX(14px); }  to { transform: none; } }
   .keys.nudge-l { animation: nudgeL .22s ease; }
@@ -768,6 +820,15 @@
           <button class="oct-btn" id="oct-down" title="Shift all rows lower (Left Shift)">◀</button>
           <span class="oct-label" id="oct-label">3–5</span>
           <button class="oct-btn" id="oct-up" title="Shift all rows higher (Right Shift)">▶</button>
+        </div>
+      </div>
+      <div class="control">
+        <span class="control-label" id="metro-title">Metronome</span>
+        <div class="metro-ctl" role="group" aria-labelledby="metro-title">
+          <input type="number" class="metro-bpm" id="metro-bpm" min="30" max="300" value="120" aria-label="Beats per minute">
+          <span class="metro-unit">bpm</span>
+          <button class="metro-tap" id="metro-tap" type="button">Tap</button>
+          <button class="deck-btn metro-btn" id="metro-toggle" type="button" aria-pressed="false"><span class="metro-led" id="metro-led" aria-hidden="true"></span>Click</button>
         </div>
       </div>
     </div>

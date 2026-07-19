@@ -14,12 +14,43 @@ which Studio view is active — a single global control, no duplication.
 
 ## UI
 
-- **Toggle button** — styled like the existing `.deck-btn` (reusing its
-  `.playing` active-state class for visual on/off feedback). Label:
-  "🔔 Metronome".
-- **BPM number input** — `<input type="number" min="30" max="300" value="120">`,
-  narrow width to match other compact controls in the panel.
-- **Tap button** — "Tap" button for tap-tempo entry.
+Tonik's visual language is skeuomorphic studio hardware — bezeled gradient
+buttons, mono numeric readouts, wide-tracked uppercase display-font labels,
+accent glow on active state, all driven by per-finish CSS custom properties.
+The metronome control reuses that vocabulary directly rather than
+introducing anything new, so it re-themes automatically across
+Walnut/Ebony/Ivory/Indigo.
+
+New `.control` block in the panel row, after Octaves:
+
+```
+Metronome
+┌────────────┐  ┌──────┐  ┌───────────┐
+│  120  bpm  │  │ Tap  │  │ ● Click   │
+└────────────┘  └──────┘  └───────────┘
+  mono numeral    tap       toggle (.deck-btn),
+  input, reuses    tempo    dot = beat LED
+  .readout-note
+  chrome
+```
+
+- **BPM input** — `<input type="number" min="30" max="300" value="120">`
+  styled with the recessed `.readout-note` chrome (`--well` background,
+  `--border`, `--mono` font, tabular numerals) instead of a native spinner
+  look; native up/down arrows hidden via CSS, arrow keys still work.
+- **Tap button** — small `.oct-btn`-style square button labeled "Tap";
+  press feedback matches the existing `.root-btn` pressed-state treatment.
+- **Toggle button** — `.deck-btn` labeled "● Click", using the existing
+  `.playing` active-state class (same one `#mix-play` uses) when running.
+
+**Signature detail — audio-synced beat LED:** the `●` inside the toggle
+button is not a static glyph or a generic CSS `animation`-driven blink. It
+is flipped to `--accent` and pulsed by JS exactly when the scheduler fires
+each click (see Scheduling below), so the light is only ever telling the
+truth about the actual audio timing — the same reason a real metronome's
+tempo light is trustworthy and a cosmetic approximation wouldn't be. This
+is the one deliberate craft detail; everything else in the control reuses
+existing, unmodified component styles.
 
 ## Behavior
 

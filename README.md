@@ -2,7 +2,7 @@
 
 **The keyboard that's always in key.** Every key on Tonik is a note of the scale you choose, so nothing you play can sound harsh or wrong — all in a single HTML file with no installs and no dependencies, just the Web Audio API.
 
-**Live demo:** https://aakash7192.github.io/digiano/
+**Live demo:** https://aakash7192.github.io/tonik/
 
 ## Features
 

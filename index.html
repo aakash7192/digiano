@@ -1576,6 +1576,7 @@
   }
 
   function flashLed() {
+    if (!metronomeOn) return;
     metroLedEl.classList.add("lit");
     setTimeout(() => metroLedEl.classList.remove("lit"), 80);
   }
@@ -1617,7 +1618,8 @@
   }
 
   metroBpmEl.addEventListener("change", () => {
-    setBpm(parseInt(metroBpmEl.value, 10) || 120);
+    const parsed = parseInt(metroBpmEl.value, 10);
+    setBpm(Number.isFinite(parsed) ? parsed : 120);
   });
 
   let savedBpm = 120;

@@ -240,6 +240,36 @@
     box-shadow: 0 0 12px var(--glow);
   }
 
+  .oct-ctl { display: flex; align-items: center; gap: 6px; }
+  .oct-btn {
+    font-size: 13px;
+    width: 34px; height: 34px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--btn-hi), var(--btn-lo));
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s;
+  }
+  .oct-btn:hover:not(:disabled) { color: var(--text); }
+  .oct-btn:disabled { opacity: .35; cursor: default; }
+  .oct-label {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-2);
+    min-width: 38px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @keyframes nudgeL { from { transform: translateX(-14px); } to { transform: none; } }
+  @keyframes nudgeR { from { transform: translateX(14px); }  to { transform: none; } }
+  .keyboard.nudge-l { animation: nudgeL .22s ease; }
+  .keyboard.nudge-r { animation: nudgeR .22s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .keyboard.nudge-l, .keyboard.nudge-r { animation: none; }
+  }
+
   select {
     font-family: var(--body);
     font-size: 15px;
@@ -502,7 +532,17 @@
   .deck-status { margin-top: 14px; font-size: 13px; color: var(--muted); letter-spacing: .03em; min-height: 1.3em; }
 
   /* Mix view */
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .timecode.small { font-size: 15px; min-width: 70px; }
+
   .tracks { display: flex; flex-direction: column; gap: 8px; }
+  .track-row.off { opacity: .5; }
+  .track-row .monitor { flex: none; }
 
   .track-row {
     display: flex;
@@ -654,6 +694,14 @@
           <option>Harmonium</option>
         </select>
       </div>
+      <div class="control">
+        <span class="control-label" id="oct-title">Octaves</span>
+        <div class="oct-ctl" role="group" aria-labelledby="oct-title">
+          <button class="oct-btn" id="oct-down" title="Shift all rows lower (Left Shift)">◀</button>
+          <span class="oct-label" id="oct-label">3–5</span>
+          <button class="oct-btn" id="oct-up" title="Shift all rows higher (Right Shift)">▶</button>
+        </div>
+      </div>
     </div>
     <div class="readout" id="readout" aria-live="polite"></div>
     <div class="chords" id="chords" aria-label="Chord pads"></div>
@@ -687,6 +735,11 @@
       </div>
 
       <div class="view mix" role="tabpanel" aria-label="Mix">
+        <div class="transport">
+          <button class="deck-btn" id="mix-play" disabled>▶ Play</button>
+          <button class="deck-btn" id="mix-stop" disabled>■ Stop</button>
+          <span class="timecode small" id="mix-time">00:00.0</span>
+        </div>
         <div class="tracks" id="tracks"></div>
         <div class="master">
           <span class="control-label">Master</span>
@@ -700,7 +753,8 @@
   <p class="hint">
     Rows are octaves — <kbd>Q</kbd>–<kbd>I</kbd> high, <kbd>A</kbd>–<kbd>K</kbd> middle,
     <kbd>Z</kbd>–<kbd>,</kbd> low. Numbers <kbd>1</kbd>–<kbd>8</kbd> play the scale's chords.
-    <kbd>Space</kbd> plays or stops your tracks. Everything you record mixes down to a WAV you can download.
+    <kbd>Left&nbsp;Shift</kbd> / <kbd>Right&nbsp;Shift</kbd> move all rows an octave lower or higher.
+    <kbd>Space</kbd> plays or pauses your tracks. Everything you record mixes down to a WAV you can download.
   </p>
 
 <script>
@@ -845,9 +899,10 @@
   }
 
   /* ---------- Scale math ---------- */
+  let octShift = 0;              // shifts all three rows, clamped to [-2, 2]
   function scaleMidi(octave, n) {
     const intervals = SCALES[scaleName];
-    return 12 * (octave + 1) + root + intervals[n % 7] + 12 * Math.floor(n / 7);
+    return 12 * (octave + 1 + octShift) + root + intervals[n % 7] + 12 * Math.floor(n / 7);
   }
   const noteName = m => NOTE_NAMES[m % 12];
   const noteOct  = m => Math.floor(m / 12) - 1;
@@ -873,6 +928,28 @@
 
   const instEl = document.getElementById("instrument");
   instEl.addEventListener("change", () => { instrument = instEl.value; });
+
+  const octDownBtn = document.getElementById("oct-down");
+  const octUpBtn = document.getElementById("oct-up");
+  const octLabel = document.getElementById("oct-label");
+
+  function shiftOctaves(delta) {
+    const next = Math.max(-2, Math.min(2, octShift + delta));
+    if (next === octShift) return;
+    octShift = next;
+    // release anything held so no notes hang across the shift
+    [...capToKey.keys()].forEach(release);
+    [...capToChord.keys()].forEach(releaseChord);
+    refresh();
+    octLabel.textContent = `${3 + octShift}–${5 + octShift}`;
+    octDownBtn.disabled = octShift === -2;
+    octUpBtn.disabled = octShift === 2;
+    keyboardEl.classList.remove("nudge-l", "nudge-r");
+    void keyboardEl.offsetWidth;   // restart the animation
+    keyboardEl.classList.add(delta < 0 ? "nudge-l" : "nudge-r");
+  }
+  octDownBtn.addEventListener("click", () => shiftOctaves(-1));
+  octUpBtn.addEventListener("click", () => shiftOctaves(1));
 
   const chordsEl = document.getElementById("chords");
   const capToChord = new Map();
@@ -983,7 +1060,7 @@
     return tracks.filter(t => (anySolo ? t.solo : !t.muted));
   }
 
-  function scheduleTracks(ac, dest, t0) {
+  function scheduleTracks(ac, dest, t0, offset = 0) {
     const voices = [];
     let dur = 0;
     audibleTracks().forEach(tr => {
@@ -991,8 +1068,10 @@
       g.gain.value = tr.gain;
       g.connect(dest);
       tr.events.forEach(ev => {
-        const v = buildVoice(ac, g, ev.inst, ev.midi, ev.vel, t0 + ev.tOn);
-        releaseVoice(v, t0 + (ev.tOff ?? ev.tOn + 0.25));
+        const evOff = ev.tOff ?? ev.tOn + 0.25;
+        if (evOff <= offset) return;
+        const v = buildVoice(ac, g, ev.inst, ev.midi, ev.vel, t0 + Math.max(0, ev.tOn - offset));
+        releaseVoice(v, t0 + (evOff - offset));
         voices.push(v);
       });
       dur = Math.max(dur, tr.dur);
@@ -1000,39 +1079,78 @@
     return { voices, dur };
   }
 
-  /* ---------- Playback ---------- */
+  /* ---------- Playback (play / pause / stop with playhead) ---------- */
   const playBtn = document.getElementById("play-all");
+  const mixPlayBtn = document.getElementById("mix-play");
+  const mixStopBtn = document.getElementById("mix-stop");
+  const mixTimeEl = document.getElementById("mix-time");
 
-  function startPlayback(t0) {
+  let playhead = 0;      // seconds into the piece when paused
+  let playClock = null;  // interval updating the mix timecode
+
+  function updateTransportUI() {
+    const hasTracks = audibleTracks().length > 0;
+    playBtn.disabled = !hasTracks || !!recording;
+    playBtn.textContent = playing ? "■ Stop" : "▶ Play all";
+    playBtn.classList.toggle("playing", !!playing);
+    mixPlayBtn.textContent = playing ? "⏸ Pause" : (playhead > 0 ? "▶ Resume" : "▶ Play");
+    mixPlayBtn.classList.toggle("playing", !!playing);
+    mixPlayBtn.disabled = !hasTracks || !!recording;
+    mixStopBtn.disabled = (!playing && playhead === 0) || !!recording;
+    if (!playing) mixTimeEl.textContent = fmtTime(playhead);
+    mixTimeEl.classList.toggle("live", !!playing);
+  }
+
+  function startPlayback(t0, offset = playhead) {
     const ac = audio();
-    stopPlayback();
+    haltVoices();
     const master = ac.createGain();
     master.gain.value = masterVol;
     master.connect(ac.destination);
     const start = t0 ?? ac.currentTime + 0.08;
-    const { voices, dur } = scheduleTracks(ac, master, start);
-    if (!voices.length) return false;
+    const { voices, dur } = scheduleTracks(ac, master, start, offset);
+    if (!voices.length) { updateTransportUI(); return false; }
     playing = {
       voices,
-      endTimer: setTimeout(stopPlayback, (start - ac.currentTime + dur + 0.8) * 1000),
+      startedAt: start,
+      offset,
+      endTimer: setTimeout(stopPlayback, (start - ac.currentTime + dur - offset + 0.8) * 1000),
     };
-    playBtn.textContent = "■ Stop";
-    playBtn.classList.add("playing");
+    playClock = setInterval(() => {
+      mixTimeEl.textContent = fmtTime(Math.max(0, playing.offset + ctx.currentTime - playing.startedAt));
+    }, 100);
+    updateTransportUI();
     return true;
   }
 
-  function stopPlayback() {
+  function haltVoices() {
     if (!playing) return;
     clearTimeout(playing.endTimer);
+    clearInterval(playClock);
     playing.voices.forEach(forceStopVoice);
     playing = null;
-    playBtn.textContent = "▶ Play all";
-    playBtn.classList.remove("playing");
+  }
+
+  function pausePlayback() {
+    if (!playing) return;
+    playhead = Math.max(0, playing.offset + ctx.currentTime - playing.startedAt);
+    haltVoices();
+    updateTransportUI();
+  }
+
+  function stopPlayback() {
+    haltVoices();
+    playhead = 0;
+    updateTransportUI();
   }
 
   playBtn.addEventListener("click", () => {
-    if (playing) stopPlayback(); else startPlayback();
+    if (playing) stopPlayback(); else { playhead = 0; startPlayback(); }
   });
+  mixPlayBtn.addEventListener("click", () => {
+    if (playing) pausePlayback(); else startPlayback();
+  });
+  mixStopBtn.addEventListener("click", stopPlayback);
 
   /* ---------- Recorder ---------- */
   const recBtn = document.getElementById("rec");
@@ -1054,7 +1172,7 @@
     recBtn.classList.add("recording");
     recBtn.title = recBtn.ariaLabel = "Stop recording";
     timecodeEl.classList.add("live");
-    playBtn.disabled = true;
+    updateTransportUI();
     statusEl.textContent = "Recording — play the keys or chord pads.";
     recTimer = setInterval(() => {
       timecodeEl.textContent = fmtTime(Math.max(0, ctx.currentTime - recording.start));
@@ -1077,10 +1195,10 @@
     recBtn.title = recBtn.ariaLabel = "Record a take";
     timecodeEl.classList.remove("live");
     timecodeEl.textContent = "00:00.0";
-    playBtn.disabled = tracks.length === 0 && events.length === 0;
 
     if (!events.length) {
       statusEl.textContent = "Nothing played — that take was empty, so it was discarded.";
+      updateTransportUI();
       return;
     }
     trackSeq++;
@@ -1112,7 +1230,7 @@
     tracksEl.innerHTML = "";
     countEl.textContent = tracks.length || "";
     dlBtn.disabled = tracks.length === 0;
-    playBtn.disabled = tracks.length === 0 || !!recording;
+    updateTransportUI();
 
     if (!tracks.length) {
       const d = document.createElement("div");
@@ -1134,6 +1252,8 @@
       name.className = "track-name";
       name.innerHTML = `${tr.name}<span class="dur">${fmtTime(tr.dur)}</span>`;
 
+      if (tr.muted) row.classList.add("off");
+
       const solo = document.createElement("button");
       solo.className = "tbtn";
       solo.textContent = "S";
@@ -1141,12 +1261,17 @@
       solo.setAttribute("aria-pressed", tr.solo);
       solo.addEventListener("click", () => { tr.solo = !tr.solo; renderTracks(); });
 
-      const mute = document.createElement("button");
-      mute.className = "tbtn";
-      mute.textContent = "M";
-      mute.title = "Mute";
-      mute.setAttribute("aria-pressed", tr.muted);
-      mute.addEventListener("click", () => { tr.muted = !tr.muted; renderTracks(); });
+      const en = document.createElement("label");
+      en.className = "monitor";
+      en.title = "Track on/off";
+      const enInput = document.createElement("input");
+      enInput.type = "checkbox";
+      enInput.checked = !tr.muted;
+      enInput.setAttribute("aria-label", `${tr.name} on/off`);
+      const enPill = document.createElement("span");
+      enPill.className = "track-pill";
+      en.append(enInput, enPill);
+      enInput.addEventListener("change", () => { tr.muted = !enInput.checked; renderTracks(); });
 
       const vol = document.createElement("input");
       vol.type = "range";
@@ -1163,7 +1288,7 @@
         renderTracks();
       });
 
-      row.append(chip, name, solo, mute, vol, del);
+      row.append(chip, name, solo, en, vol, del);
       tracksEl.appendChild(row);
     });
   }
@@ -1257,9 +1382,11 @@
     if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
     if (e.code === "Space" && e.target === document.body) {
       e.preventDefault();
-      if (!recording) { if (playing) stopPlayback(); else startPlayback(); }
+      if (!recording) { if (playing) pausePlayback(); else startPlayback(); }
       return;
     }
+    if (e.code === "ShiftLeft")  { shiftOctaves(-1); return; }
+    if (e.code === "ShiftRight") { shiftOctaves(1);  return; }
     const cap = e.key.toLowerCase();
     if (capToKey.has(cap))   { e.preventDefault(); press(cap); }
     if (capToChord.has(cap)) { e.preventDefault(); pressChord(cap); }

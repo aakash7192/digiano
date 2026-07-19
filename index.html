@@ -637,10 +637,37 @@
   }
 
   @media (max-width: 640px) {
-    .row[data-row="1"] { padding-left: 14px; }
-    .row[data-row="2"] { padding-left: 28px; }
-    .key { height: 84px; }
+    body { padding: 20px 12px 40px; }
+    .panel, .view { padding-left: 14px; padding-right: 14px; }
+    select { font-size: 16px; min-height: 44px; }        /* 16px stops iOS zoom-on-focus */
+    .root-btn { width: 44px; height: 44px; font-size: 14px; }
+    .oct-btn { width: 44px; height: 44px; }
+    .chord-btn { min-height: 44px; padding: 10px 14px; font-size: 14px; }
+    .swatch { width: 30px; height: 30px; }
+
+    .keyboard { padding: 12px 10px 16px; }
+    /* Octave rows wrap into a 4-wide grid so every key stays a real touch
+       target (~74-84px x 58px) instead of 8 slivers across the screen */
+    .row { display: grid; grid-template-columns: repeat(4, minmax(50px, 1fr)); gap: 6px; margin-top: 6px; }
+    .row[data-row="1"], .row[data-row="2"] { padding-left: 0; }
+    .key {
+      height: 58px;
+      justify-content: center;
+      gap: 3px;
+      padding: 4px;
+      border-radius: 7px;
+    }
     .key .cap { display: none; }
+    .key .note { font-size: 19px; }
+
+    .rec-btn { width: 62px; height: 62px; }
+    .deck-btn { padding: 13px 16px; }
+    .tbtn { width: 36px; height: 36px; font-size: 12px; }
+    .monitor .track-pill { width: 40px; height: 23px; }
+    .monitor .track-pill::after { width: 17px; height: 17px; }
+    .monitor input:checked + .track-pill::after { transform: translateX(17px); }
+    .track-row { flex-wrap: wrap; }
+    .track-row input[type="range"] { min-width: 120px; }
     .track-name { min-width: 90px; }
   }
 

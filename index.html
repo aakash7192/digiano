@@ -1624,6 +1624,18 @@
   try { savedBpm = parseInt(localStorage.getItem("tonik-bpm"), 10) || 120; } catch (e) {}
   setBpm(savedBpm);
 
+  let tapTimes = [];
+  metroTapEl.addEventListener("click", () => {
+    const now = performance.now();
+    if (tapTimes.length && now - tapTimes[tapTimes.length - 1] > 2000) tapTimes = [];
+    tapTimes.push(now);
+    if (tapTimes.length > 5) tapTimes.shift();
+    const computed = bpmFromTaps(tapTimes);
+    if (computed !== null) setBpm(computed);
+    metroTapEl.classList.add("tapped");
+    setTimeout(() => metroTapEl.classList.remove("tapped"), 120);
+  });
+
   /* ---------- Computer keyboard ---------- */
   window.addEventListener("keydown", e => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;

@@ -1610,6 +1610,20 @@
     if (metronomeOn) stopMetronome(); else startMetronome();
   });
 
+  function setBpm(value) {
+    bpm = Math.min(300, Math.max(30, Math.round(value)));
+    metroBpmEl.value = bpm;
+    try { localStorage.setItem("tonik-bpm", String(bpm)); } catch (e) {}
+  }
+
+  metroBpmEl.addEventListener("change", () => {
+    setBpm(parseInt(metroBpmEl.value, 10) || 120);
+  });
+
+  let savedBpm = 120;
+  try { savedBpm = parseInt(localStorage.getItem("tonik-bpm"), 10) || 120; } catch (e) {}
+  setBpm(savedBpm);
+
   /* ---------- Computer keyboard ---------- */
   window.addEventListener("keydown", e => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;

@@ -1527,6 +1527,40 @@
   try { savedFinish = localStorage.getItem("tonik-finish") || "walnut"; } catch (e) {}
   setFinish(savedFinish);
 
+  /* ---------- Metronome ---------- */
+  const metroBpmEl = document.getElementById("metro-bpm");
+  const metroTapEl = document.getElementById("metro-tap");
+  const metroToggleEl = document.getElementById("metro-toggle");
+  const metroLedEl = document.getElementById("metro-led");
+
+  const METRO_LOOKAHEAD = 0.1;   // seconds scheduled ahead of ac.currentTime
+  const METRO_INTERVAL = 25;     // ms between scheduler polls
+  let bpm = 120;
+  let metronomeOn = false;
+  let metroTimer = null;
+  let metroNextTick = 0;
+
+  // Pure: which tick times (seconds, ac.currentTime domain) fall before
+  // horizonEnd starting from nextTick, and where the next tick after them
+  // lands. No DOM/Audio access, so it's unit-testable in isolation.
+  function ticksInWindow(nextTick, horizonEnd, bpmValue) {
+    const ticks = [];
+    let t = nextTick;
+    const step = 60 / bpmValue;
+    while (t < horizonEnd) { ticks.push(t); t += step; }
+    return { ticks, next: t };
+  }
+
+  // Pure: BPM implied by a list of tap timestamps (ms), from the average
+  // of the intervals between them. Needs at least 2 taps.
+  function bpmFromTaps(times) {
+    if (times.length < 2) return null;
+    const intervals = [];
+    for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1]);
+    const avgMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    return 60000 / avgMs;
+  }
+
   /* ---------- Computer keyboard ---------- */
   window.addEventListener("keydown", e => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;

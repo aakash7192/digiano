@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Piano</title>
+<style>
+  :root {
+    --bg: #292019;
+    --bg-deep: #1c1510;
+    --wood: #5c3b28;
+    --wood-hi: #7a4f34;
+    --ivory: #f3ebdb;
+    --ivory-shade: #ddd2bc;
+    --ink: #2a2320;
+    --amber: #ffb454;
+    --amber-deep: #e08b2d;
+    --muted: #a8987f;
+    --panel: #362b22;
+    --display: "Futura", "Avenir Next Condensed", "Trebuchet MS", sans-serif;
+    --body: "Avenir Next", "Avenir", "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", "Menlo", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: radial-gradient(ellipse at 50% -20%, #3a2d21 0%, var(--bg) 45%, var(--bg-deep) 100%);
+    color: var(--ivory);
+    font-family: var(--body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 48px;
+  }
+
+  /* ---------- Badge ---------- */
+  .badge {
+    font-family: var(--display);
+    letter-spacing: 0.42em;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid #4a3a2c;
+    border-radius: 3px;
+    padding: 7px 18px 6px 22px;
+    background: linear-gradient(180deg, #3b2f24, #2e241c);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 2px 6px rgba(0,0,0,.4);
+  }
+  .badge b { color: var(--amber); font-weight: 500; }
+
+  /* ---------- Control panel ---------- */
+  .panel {
+    margin-top: 28px;
+    width: min(920px, 100%);
+    background: linear-gradient(180deg, var(--panel), #2c221a);
+    border: 1px solid #46372a;
+    border-radius: 10px;
+    padding: 18px 22px 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+
+  .panel-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-end;
+  }
+
+  .control { display: flex; flex-direction: column; gap: 8px; }
+  .control-label {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .roots { display: flex; gap: 4px; flex-wrap: wrap; }
+  .root-btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    width: 38px; height: 34px;
+    border-radius: 5px;
+    border: 1px solid #4a3a2c;
+    background: linear-gradient(180deg, #3d3125, #31271e);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .root-btn:hover { color: var(--ivory); }
+  .root-btn[aria-pressed="true"] {
+    background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+    color: var(--ink);
+    border-color: var(--amber-deep);
+    font-weight: 700;
+    box-shadow: 0 0 12px rgba(255,180,84,.35);
+  }
+
+  select {
+    font-family: var(--body);
+    font-size: 15px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    background: #31271e;
+    color: var(--ivory);
+    border: 1px solid #4a3a2c;
+    cursor: pointer;
+  }
+
+  :is(.root-btn, select, .key):focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Scale readout ---------- */
+  .readout {
+    margin-top: 16px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .readout-note {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: #251c15;
+    border: 1px solid #40332755;
+    color: var(--ivory-shade);
+  }
+  .readout-note .deg { color: var(--muted); margin-right: 6px; font-size: 11px; }
+  .readout-note.tonic { border-color: var(--amber-deep); color: var(--amber); }
+
+  /* ---------- Chord pads ---------- */
+  .chords { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chord-btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: 1px solid #4a3a2c;
+    background: linear-gradient(180deg, #3d3125, #31271e);
+    color: var(--ivory-shade);
+    cursor: pointer;
+    touch-action: none;
+  }
+  .chord-btn .cap { color: var(--muted); margin-right: 7px; font-size: 11px; }
+  .chord-btn.down {
+    background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+    color: var(--ink);
+    border-color: var(--amber-deep);
+    box-shadow: 0 0 12px rgba(255,180,84,.35);
+  }
+  .chord-btn.down .cap { color: var(--ink); }
+
+  /* ---------- Keyboard ---------- */
+  .keyboard {
+    margin-top: 34px;
+    width: min(980px, 100%);
+    border-radius: 12px;
+    padding: 20px 18px 24px;
+    background: linear-gradient(180deg, var(--wood-hi), var(--wood) 12%, #43291b);
+    box-shadow: 0 18px 45px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.12);
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .row[data-row="0"] { margin-top: 0; }
+  .row[data-row="1"] { padding-left: 26px; }
+  .row[data-row="2"] { padding-left: 52px; }
+
+  .key {
+    flex: 1;
+    min-width: 0;
+    height: 108px;
+    border: none;
+    border-radius: 5px 5px 8px 8px;
+    background: linear-gradient(180deg, #fbf5e8, var(--ivory) 60%, var(--ivory-shade));
+    color: var(--ink);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 4px 10px;
+    box-shadow: 0 4px 0 #b9ad95, 0 6px 10px rgba(0,0,0,.4);
+    transition: transform .05s ease, box-shadow .05s ease, background .05s ease;
+    touch-action: none;
+  }
+  /* pitch height encoded in ivory tint: lower rows sit deeper in shadow */
+  .row[data-row="1"] .key { filter: brightness(.94); }
+  .row[data-row="2"] .key { filter: brightness(.88); }
+
+  .key .cap {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #a2937a;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+  .key .note {
+    font-family: var(--display);
+    font-size: clamp(14px, 2.6vw, 22px);
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
+  .key .note sub {
+    font-size: .55em;
+    color: #6e6250;
+    vertical-align: baseline;
+    position: relative;
+    top: .25em;
+    left: .1em;
+  }
+  .key .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: transparent;
+  }
+  .key.tonic .dot { background: var(--amber-deep); }
+
+  .key.down {
+    transform: translateY(4px);
+    background: linear-gradient(180deg, #ffe9c4, #ffd591);
+    box-shadow: 0 0 0 #b9ad95, 0 0 18px rgba(255,180,84,.55);
+  }
+
+  .hint {
+    margin-top: 22px;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+  .hint kbd {
+    font-family: var(--mono);
+    background: #31271e;
+    border: 1px solid #4a3a2c;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 12px;
+  }
+
+  @media (max-width: 640px) {
+    .row[data-row="1"] { padding-left: 14px; }
+    .row[data-row="2"] { padding-left: 28px; }
+    .key { height: 84px; }
+    .key .cap { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .key { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="badge">Smart <b>Piano</b></div>
+
+  <section class="panel" aria-label="Scale controls">
+    <div class="panel-row">
+      <div class="control">
+        <span class="control-label" id="root-label">Root</span>
+        <div class="roots" role="group" aria-labelledby="root-label" id="roots"></div>
+      </div>
+      <div class="control">
+        <label class="control-label" for="scale">Scale</label>
+        <select id="scale"></select>
+      </div>
+      <div class="control">
+        <label class="control-label" for="instrument">Instrument</label>
+        <select id="instrument">
+          <option>Piano</option>
+          <option>Harmonium</option>
+        </select>
+      </div>
+    </div>
+    <div class="readout" id="readout" aria-live="polite"></div>
+    <div class="chords" id="chords" aria-label="Chord pads"></div>
+  </section>
+
+  <section class="keyboard" aria-label="Piano keys" id="keyboard"></section>
+
+  <p class="hint">
+    Rows are octaves — <kbd>Q</kbd>–<kbd>I</kbd> high, <kbd>A</kbd>–<kbd>K</kbd> middle,
+    <kbd>Z</kbd>–<kbd>,</kbd> low. Numbers <kbd>1</kbd>–<kbd>8</kbd> play the scale's chords
+    in sequence. Hold to sustain, click works too.
+  </p>
+
+<script>
+(() => {
+  const NOTE_NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+
+  const SCALES = {
+    "Major":          [0,2,4,5,7,9,11],
+    "Natural Minor":  [0,2,3,5,7,8,10],
+    "Harmonic Minor": [0,2,3,5,7,8,11],
+    "Melodic Minor":  [0,2,3,5,7,9,11],
+    "Dorian":         [0,2,3,5,7,9,10],
+    "Phrygian":       [0,1,3,5,7,8,10],
+    "Lydian":         [0,2,4,6,7,9,11],
+    "Mixolydian":     [0,2,4,5,7,9,10],
+    "Locrian":        [0,1,3,5,6,8,10],
+  };
+
+  // Three rows: top row = highest octave. 8 physical keys each (7 degrees + octave).
+  const ROWS = [
+    { caps: ["q","w","e","r","t","y","u","i"], octave: 5 },
+    { caps: ["a","s","d","f","g","h","j","k"], octave: 4 },
+    { caps: ["z","x","c","v","b","n","m",","], octave: 3 },
+  ];
+
+  let root = 0;            // semitone index, C = 0
+  let scaleName = "Major";
+  let instrument = "Piano";
+  const capToKey = new Map();   // keyboard character -> {el, midi}
+  const active = new Map();     // cap -> {osc..., gain} currently sounding
+
+  /* ---------- Audio ---------- */
+  let ctx = null;
+  function audio() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+
+  function startNote(midi, vel = 1) {
+    const ac = audio();
+    const freq = 440 * Math.pow(2, (midi - 69) / 12);
+    const now = ac.currentTime;
+
+    const gain = ac.createGain();
+    const filter = ac.createBiquadFilter();
+    filter.type = "lowpass";
+    const oscs = [];
+    let release = 0.25;
+
+    if (instrument === "Harmonium") {
+      // reeds: two detuned saws beating against each other + a sine body,
+      // slow attack, steady sustain like pumped bellows
+      release = 0.15;
+      filter.frequency.value = Math.min(freq * 4, 6000);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.13 * vel, now + 0.06);
+      [-5, 4].forEach(cents => {
+        const o = ac.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.value = freq;
+        o.detune.value = cents;
+        o.connect(filter);
+        oscs.push(o);
+      });
+      const sub = ac.createOscillator();
+      sub.type = "sine";
+      sub.frequency.value = freq;
+      const gs = ac.createGain();
+      gs.gain.value = 0.5;
+      sub.connect(gs).connect(filter);
+      oscs.push(sub);
+    } else {
+      filter.frequency.value = Math.min(freq * 6, 9000);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.28 * vel, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.12 * vel, now + 0.35);
+      const o1 = ac.createOscillator();
+      o1.type = "triangle";
+      o1.frequency.value = freq;
+      o1.connect(filter);
+      const o2 = ac.createOscillator();
+      o2.type = "sine";
+      o2.frequency.value = freq * 2;
+      const g2 = ac.createGain();
+      g2.gain.value = 0.18;
+      o2.connect(g2).connect(filter);
+      oscs.push(o1, o2);
+    }
+
+    filter.connect(gain).connect(ac.destination);
+    oscs.forEach(o => o.start(now));
+    return { oscs, gain, release };
+  }
+
+  function stopNote(voice) {
+    const now = ctx.currentTime;
+    voice.gain.gain.cancelScheduledValues(now);
+    voice.gain.gain.setValueAtTime(Math.max(voice.gain.gain.value, 0.0001), now);
+    voice.gain.gain.exponentialRampToValueAtTime(0.0001, now + voice.release);
+    voice.oscs.forEach(o => o.stop(now + voice.release + 0.05));
+  }
+
+  /* ---------- Scale math ---------- */
+  function scaleMidi(octave, n) {         // n = scale degree, may exceed 7
+    const intervals = SCALES[scaleName];
+    return 12 * (octave + 1) + root + intervals[n % 7] + 12 * Math.floor(n / 7);
+  }
+  const midiFor = (rowOctave, degree) => scaleMidi(rowOctave, degree);
+  const noteName = m => NOTE_NAMES[m % 12];
+  const noteOct  = m => Math.floor(m / 12) - 1;
+
+  /* ---------- Build UI ---------- */
+  const rootsEl = document.getElementById("roots");
+  NOTE_NAMES.forEach((n, i) => {
+    const b = document.createElement("button");
+    b.className = "root-btn";
+    b.textContent = n;
+    b.setAttribute("aria-pressed", i === root);
+    b.addEventListener("click", () => { root = i; refresh(); });
+    rootsEl.appendChild(b);
+  });
+
+  const scaleEl = document.getElementById("scale");
+  Object.keys(SCALES).forEach(name => {
+    const o = document.createElement("option");
+    o.value = o.textContent = name;
+    scaleEl.appendChild(o);
+  });
+  scaleEl.addEventListener("change", () => { scaleName = scaleEl.value; refresh(); });
+
+  const instEl = document.getElementById("instrument");
+  instEl.addEventListener("change", () => { instrument = instEl.value; });
+
+  const chordsEl = document.getElementById("chords");
+  const capToChord = new Map();   // "1".."8" -> {el, midis}
+  const activeChords = new Map(); // cap -> [voices]
+  "12345678".split("").forEach(cap => {
+    const b = document.createElement("button");
+    b.className = "chord-btn";
+    b.innerHTML = `<span class="cap">${cap}</span><span class="name"></span>`;
+    b.addEventListener("pointerdown", e => { e.preventDefault(); pressChord(cap); });
+    b.addEventListener("pointerup",   () => releaseChord(cap));
+    b.addEventListener("pointerleave",() => releaseChord(cap));
+    chordsEl.appendChild(b);
+    capToChord.set(cap, { el: b, midis: [] });
+  });
+
+  const keyboardEl = document.getElementById("keyboard");
+  ROWS.forEach((row, r) => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "row";
+    rowEl.dataset.row = r;
+    row.caps.forEach((cap, d) => {
+      const k = document.createElement("button");
+      k.className = "key";
+      k.dataset.cap = cap;
+      k.innerHTML = `<span class="cap">${cap === "," ? "," : cap}</span>
+                     <span class="note"></span>
+                     <span class="dot"></span>`;
+      k.addEventListener("pointerdown", e => { e.preventDefault(); press(cap); });
+      k.addEventListener("pointerup",   () => release(cap));
+      k.addEventListener("pointerleave",() => release(cap));
+      rowEl.appendChild(k);
+      capToKey.set(cap, { el: k, row: r, degree: d, midi: 0 });
+    });
+    keyboardEl.appendChild(rowEl);
+  });
+
+  const readoutEl = document.getElementById("readout");
+
+  function refresh() {
+    document.querySelectorAll(".root-btn").forEach((b, i) =>
+      b.setAttribute("aria-pressed", i === root));
+
+    capToKey.forEach((info, cap) => {
+      const m = midiFor(ROWS[info.row].octave, info.degree);
+      info.midi = m;
+      info.el.querySelector(".note").innerHTML =
+        `${noteName(m)}<sub>${noteOct(m)}</sub>`;
+      info.el.classList.toggle("tonic", info.degree === 0 || info.degree === 7);
+    });
+
+    readoutEl.innerHTML = "";
+    for (let d = 0; d < 8; d++) {
+      const m = midiFor(4, d);
+      const span = document.createElement("span");
+      span.className = "readout-note" + (d === 0 || d === 7 ? " tonic" : "");
+      span.innerHTML = `<span class="deg">${d + 1}</span>${noteName(m)}`;
+      readoutEl.appendChild(span);
+    }
+
+    capToChord.forEach((info, cap) => {
+      const d = cap.charCodeAt(0) - 49;   // "1" -> degree 0
+      info.midis = [scaleMidi(4, d), scaleMidi(4, d + 2), scaleMidi(4, d + 4)];
+      const third = info.midis[1] - info.midis[0];
+      const fifth = info.midis[2] - info.midis[0];
+      const quality =
+        third === 4 && fifth === 7 ? ""  :
+        third === 3 && fifth === 7 ? "m" :
+        third === 3 && fifth === 6 ? "°" :
+        third === 4 && fifth === 8 ? "+" : "";
+      info.el.querySelector(".name").textContent = noteName(info.midis[0]) + quality;
+    });
+  }
+
+  /* ---------- Playing ---------- */
+  function press(cap) {
+    const info = capToKey.get(cap);
+    if (!info || active.has(cap)) return;
+    active.set(cap, startNote(info.midi));
+    info.el.classList.add("down");
+  }
+  function release(cap) {
+    const voice = active.get(cap);
+    if (!voice) return;
+    stopNote(voice);
+    active.delete(cap);
+    capToKey.get(cap).el.classList.remove("down");
+  }
+
+  function pressChord(cap) {
+    const info = capToChord.get(cap);
+    if (!info || activeChords.has(cap)) return;
+    activeChords.set(cap, info.midis.map(m => startNote(m, 0.6)));
+    info.el.classList.add("down");
+    capToKey.forEach(k => {
+      if (info.midis.includes(k.midi)) k.el.classList.add("down");
+    });
+  }
+  function releaseChord(cap) {
+    const voices = activeChords.get(cap);
+    if (!voices) return;
+    voices.forEach(stopNote);
+    activeChords.delete(cap);
+    const info = capToChord.get(cap);
+    info.el.classList.remove("down");
+    capToKey.forEach((k, kcap) => {
+      if (info.midis.includes(k.midi) && !active.has(kcap)) k.el.classList.remove("down");
+    });
+  }
+
+  window.addEventListener("keydown", e => {
+    if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.tagName === "SELECT") return;
+    const cap = e.key.toLowerCase();
+    if (capToKey.has(cap))   { e.preventDefault(); press(cap); }
+    if (capToChord.has(cap)) { e.preventDefault(); pressChord(cap); }
+  });
+  window.addEventListener("keyup", e => {
+    const cap = e.key.toLowerCase();
+    release(cap);
+    releaseChord(cap);
+  });
+  window.addEventListener("blur", () => {
+    [...active.keys()].forEach(release);
+    [...activeChords.keys()].forEach(releaseChord);
+  });
+
+  refresh();
+})();
+</script>
+</body>
+</html>

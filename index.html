@@ -686,6 +686,123 @@
   .dl-btn:hover:not(:disabled) { filter: brightness(1.08); }
   .dl-btn:disabled { opacity: .45; cursor: default; }
 
+  /* ---------- Side rails: root & octave drum rollers ---------- */
+  .rail {
+    position: fixed;
+    top: 50%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 5;
+  }
+  .rail-l { left: calc((100vw - 980px) / 4); transform: translate(-50%, -50%); }
+  .rail-r { right: calc((100vw - 980px) / 4); transform: translate(50%, -50%); }
+
+  .rail-keys { display: flex; gap: 6px; }
+  .rail-keys kbd {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--btn-lo);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+
+  .wheel {
+    position: relative;
+    width: 94px;
+    height: 208px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, var(--bezel-hi), var(--bezel) 14%, var(--bezel-deep));
+    box-shadow: 0 16px 38px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.12);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  .wheel:active { cursor: grabbing; }
+  .wheel:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .wheel .scene {
+    position: absolute;
+    inset: 9px;
+    border-radius: 9px;
+    background: var(--well);
+    box-shadow: inset 0 3px 10px rgba(0,0,0,.55);
+    overflow: hidden;
+    perspective: 700px;
+  }
+  .wheel .drum {
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    height: 40px;
+    margin-top: -20px;
+    transform-style: preserve-3d;
+    transition: transform .5s cubic-bezier(.18, 1.45, .35, 1);
+  }
+  .wheel .tooth {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    color: var(--muted);
+    backface-visibility: hidden;
+    transition: color .25s, text-shadow .25s;
+  }
+  .wheel .tooth.hot {
+    color: var(--accent);
+    text-shadow: 0 0 12px var(--glow);
+  }
+
+  .wheel .lens {
+    position: absolute;
+    inset: 9px;
+    border-radius: 9px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,0) 32%, rgba(0,0,0,0) 68%, rgba(0,0,0,.6));
+  }
+  [data-theme="ivory"] .wheel .lens {
+    background: linear-gradient(180deg, rgba(58,42,28,.3), rgba(58,42,28,0) 32%, rgba(58,42,28,0) 68%, rgba(58,42,28,.3));
+  }
+  .wheel .lens::before {   /* detent window */
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    height: 40px;
+    margin-top: -20px;
+    border-block: 1px solid var(--accent-deep);
+    background: linear-gradient(rgba(255,255,255,.07), rgba(255,255,255,0) 55%);
+  }
+  .wheel .lens::after {    /* pointer notch on the outer edge */
+    content: "";
+    position: absolute;
+    top: 50%;
+    margin-top: -5px;
+    border-block: 5px solid transparent;
+  }
+  .rail-l .lens::after { left: -9px; border-left: 8px solid var(--accent); }
+  .rail-r .lens::after { right: -9px; border-right: 8px solid var(--accent); }
+
+  .wheel.ticked .lens::before { animation: detentFlash .35s ease-out; }
+  @keyframes detentFlash {
+    0% { box-shadow: inset 0 0 18px var(--glow); border-color: var(--accent); }
+  }
+
+  /* Rails only exist where the gutters do; they replace the panel's
+     root buttons and octave arrows there */
+  @media (min-width: 1300px) {
+    .rail { display: flex; }
+    .control-roots, .control-oct { display: none; }
+  }
+
   /* ---------- Hint ---------- */
   .hint {
     margin-top: 22px;
@@ -762,6 +879,8 @@
   @media (prefers-reduced-motion: reduce) {
     .key, .views, .seg-thumb, .swatch { transition: none; }
     .rec-btn.recording { animation: none; }
+    .wheel .drum { transition: none; }
+    .wheel.ticked .lens::before { animation: none; }
   }
 </style>
 </head>
@@ -792,6 +911,28 @@
     </div>
   </header>
 
+  <aside class="rail rail-l">
+    <span class="control-label">Octave</span>
+    <div class="wheel" id="oct-wheel" tabindex="0" role="slider" aria-orientation="vertical"
+         aria-label="Octave range" aria-valuemin="-2" aria-valuemax="2"
+         title="Scroll or drag — Left Shift lower, Right Shift higher">
+      <div class="scene"><div class="drum" id="oct-drum"></div></div>
+      <div class="lens" aria-hidden="true"></div>
+    </div>
+    <span class="rail-keys" aria-hidden="true"><kbd>L⇧</kbd><kbd>R⇧</kbd></span>
+  </aside>
+
+  <aside class="rail rail-r">
+    <span class="control-label">Root</span>
+    <div class="wheel" id="root-wheel" tabindex="0" role="slider" aria-orientation="vertical"
+         aria-label="Root note" aria-valuemin="0" aria-valuemax="11"
+         title="Scroll or drag — ↑ ↓ change the root">
+      <div class="scene"><div class="drum" id="root-drum"></div></div>
+      <div class="lens" aria-hidden="true"></div>
+    </div>
+    <span class="rail-keys" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd></span>
+  </aside>
+
   <section class="panel" aria-label="Scale controls">
     <div class="sec-head">
       <span class="control-label">Scale &amp; sound</span>
@@ -799,7 +940,7 @@
     </div>
     <div class="sec-body"><div class="sec-inner">
     <div class="panel-row">
-      <div class="control">
+      <div class="control control-roots">
         <span class="control-label" id="root-label">Root</span>
         <div class="roots" role="group" aria-labelledby="root-label" id="roots"></div>
       </div>
@@ -814,7 +955,7 @@
           <option>Harmonium</option>
         </select>
       </div>
-      <div class="control">
+      <div class="control control-oct">
         <span class="control-label" id="oct-title">Octaves</span>
         <div class="oct-ctl" role="group" aria-labelledby="oct-title">
           <button class="oct-btn" id="oct-down" title="Shift all rows lower (Left Shift)">◀</button>
@@ -894,6 +1035,7 @@
   <p class="hint">
     Rows are octaves — <kbd>Q</kbd>–<kbd>I</kbd> high, <kbd>A</kbd>–<kbd>K</kbd> middle,
     <kbd>Z</kbd>–<kbd>,</kbd> low. Numbers <kbd>1</kbd>–<kbd>8</kbd> play the scale's chords.
+    <kbd>↑</kbd> / <kbd>↓</kbd> roll the root-note wheel.
     <kbd>Left&nbsp;Shift</kbd> / <kbd>Right&nbsp;Shift</kbd> move all rows an octave lower or higher.
     <kbd>Space</kbd> plays or pauses your tracks. Everything you record mixes down to a WAV you can download.
   </p>
@@ -1055,7 +1197,7 @@
     b.className = "root-btn";
     b.textContent = n;
     b.setAttribute("aria-pressed", i === root);
-    b.addEventListener("click", () => { root = i; refresh(); });
+    b.addEventListener("click", () => setRoot(i));
     rootsEl.appendChild(b);
   });
 
@@ -1085,6 +1227,8 @@
     octLabel.textContent = `${3 + octShift}–${5 + octShift}`;
     octDownBtn.disabled = octShift === -2;
     octUpBtn.disabled = octShift === 2;
+    renderOctWheel();
+    clunk(octWheelEl);
     keyboardEl.classList.remove("nudge-l", "nudge-r");
     void keyboardEl.offsetWidth;   // restart the animation
     keyboardEl.classList.add(delta < 0 ? "nudge-l" : "nudge-r");
@@ -1638,6 +1782,113 @@
     setTimeout(() => metroTapEl.classList.remove("tapped"), 120);
   });
 
+  /* ---------- Side rails: root & octave drum rollers ---------- */
+  const WHEEL_STEP = 30;      // degrees per detent — 12 teeth per full turn
+  const WHEEL_RADIUS = 76;    // px, drum radius
+
+  const rootWheelEl = document.getElementById("root-wheel");
+  const rootDrumEl  = document.getElementById("root-drum");
+  const octWheelEl  = document.getElementById("oct-wheel");
+  const octDrumEl   = document.getElementById("oct-drum");
+
+  function buildDrum(drumEl, labels) {
+    labels.forEach((text, i) => {
+      const t = document.createElement("div");
+      t.className = "tooth";
+      t.textContent = text;
+      t.style.transform = `rotateX(${-i * WHEEL_STEP}deg) translateZ(${WHEEL_RADIUS}px)`;
+      drumEl.appendChild(t);
+    });
+  }
+  buildDrum(rootDrumEl, NOTE_NAMES);
+  buildDrum(octDrumEl, [-2, -1, 0, 1, 2].map(s => `${3 + s}–${5 + s}`));
+
+  // Cumulative rotation, so C→B rolls one detent back instead of a
+  // full lap forward around the cylinder.
+  let rootSpin = root * WHEEL_STEP;
+
+  function renderRootWheel() {
+    rootDrumEl.style.transform = `rotateX(${rootSpin}deg)`;
+    [...rootDrumEl.children].forEach((t, i) => t.classList.toggle("hot", i === root));
+    rootWheelEl.setAttribute("aria-valuenow", root);
+    rootWheelEl.setAttribute("aria-valuetext", NOTE_NAMES[root]);
+  }
+
+  function renderOctWheel() {
+    octDrumEl.style.transform = `rotateX(${(octShift + 2) * WHEEL_STEP}deg)`;
+    [...octDrumEl.children].forEach((t, i) => t.classList.toggle("hot", i === octShift + 2));
+    octWheelEl.setAttribute("aria-valuenow", octShift);
+    octWheelEl.setAttribute("aria-valuetext", `Octaves ${3 + octShift} to ${5 + octShift}`);
+  }
+
+  function setRoot(next) {
+    next = ((next % 12) + 12) % 12;
+    if (next === root) return;
+    let delta = next - root;
+    if (delta > 6) delta -= 12;
+    if (delta < -6) delta += 12;
+    rootSpin += delta * WHEEL_STEP;
+    root = next;
+    refresh();
+    renderRootWheel();
+    clunk(rootWheelEl);
+  }
+
+  // Detent feedback: lens flash + a soft mechanical tick (only once the
+  // audio context is already running — a scroll isn't a user activation).
+  function clunk(wheelEl) {
+    wheelEl.classList.remove("ticked");
+    void wheelEl.offsetWidth;
+    wheelEl.classList.add("ticked");
+    if (!ctx || ctx.state !== "running") return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "triangle";
+    o.frequency.value = 2400;
+    g.gain.setValueAtTime(0.04, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    o.connect(g).connect(ctx.destination);
+    o.start(t);
+    o.stop(t + 0.04);
+  }
+
+  function wheelControls(el, onStep) {
+    el.addEventListener("wheel", e => { e.preventDefault(); onStep(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+    let dragY = null;
+    el.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      dragY = e.clientY;
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener("pointermove", e => {
+      if (dragY === null) return;
+      const dy = e.clientY - dragY;
+      if (Math.abs(dy) >= 26) { onStep(dy > 0 ? -1 : 1); dragY = e.clientY; }
+    });
+    el.addEventListener("pointerup", () => { dragY = null; });
+    el.addEventListener("pointercancel", () => { dragY = null; });
+    el.addEventListener("keydown", e => {
+      if (e.key === "ArrowUp")   { e.preventDefault(); onStep(1); }
+      if (e.key === "ArrowDown") { e.preventDefault(); onStep(-1); }
+    });
+  }
+  wheelControls(rootWheelEl, d => setRoot(root + d));
+  wheelControls(octWheelEl, d => shiftOctaves(d));
+
+  // Slot-machine settle on load: both drums spin in from a lap away.
+  function spinInWheels() {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    [[rootDrumEl, () => rootSpin], [octDrumEl, () => (octShift + 2) * WHEEL_STEP]].forEach(([drum, rest], i) => {
+      drum.style.transition = "none";
+      drum.style.transform = `rotateX(${rest() - 240 - i * 90}deg)`;
+      void drum.offsetWidth;
+      drum.style.transition = `transform ${1.2 + i * 0.15}s cubic-bezier(.16, 1, .3, 1)`;
+      drum.style.transform = `rotateX(${rest()}deg)`;
+      setTimeout(() => { drum.style.transition = ""; }, 1600);
+    });
+  }
+
   /* ---------- Computer keyboard ---------- */
   window.addEventListener("keydown", e => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -1649,6 +1900,13 @@
     }
     if (e.code === "ShiftLeft")  { shiftOctaves(-1); return; }
     if (e.code === "ShiftRight") { shiftOctaves(1);  return; }
+    if (e.code === "ArrowUp" || e.code === "ArrowDown") {
+      // A focused wheel already handles its own arrows
+      if (e.target instanceof Element && e.target.closest(".wheel")) return;
+      e.preventDefault();
+      setRoot(root + (e.code === "ArrowUp" ? 1 : -1));
+      return;
+    }
     const cap = e.key.toLowerCase();
     if (capToKey.has(cap))   { e.preventDefault(); press(cap); }
     if (capToChord.has(cap)) { e.preventDefault(); pressChord(cap); }
@@ -1664,7 +1922,10 @@
   });
 
   refresh();
+  renderRootWheel();
+  renderOctWheel();
   renderTracks();
+  spinInWheels();
 })();
 </script>
 </body>
